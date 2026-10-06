@@ -1,0 +1,768 @@
+<title>Harborline Lending Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: harbor-blue hero band with illustration + payment estimator, then a filterable rate board, all inside one centered column */
+:root{
+  --navy:#0A2350; --blue:#1C5BD9; --blue-2:#3B7BF0; --sky:#E7EFFD; --ice:#F5F8FE;
+  --bg:#FFFFFF; --fg:#0D1B33; --muted:#52627E; --line:#D8E2F3; --card:#FFFFFF;
+  --onblue:#FFFFFF; --warn-bg:#FFF4D6; --warn-fg:#7A5300; --ok:#127A4B; --ok-bg:#E3F6EC;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --navy:#06152F; --blue:#4C86F5; --blue-2:#7AA6FA; --sky:#132A52; --ice:#0D1D3A;
+  --bg:#0A1730; --fg:#E8EFFC; --muted:#9DB0D3; --line:#22375F; --card:#0F2142;
+  --onblue:#FFFFFF; --warn-bg:#3A2E0B; --warn-fg:#F5D27A; --ok:#5FD39B; --ok-bg:#103626; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --navy:#06152F; --blue:#4C86F5; --blue-2:#7AA6FA; --sky:#132A52; --ice:#0D1D3A;
+  --bg:#0A1730; --fg:#E8EFFC; --muted:#9DB0D3; --line:#22375F; --card:#0F2142;
+  --onblue:#FFFFFF; --warn-bg:#3A2E0B; --warn-fg:#F5D27A; --ok:#5FD39B; --ok-bg:#103626; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55}
+h1,h2,h3{font-family:var(--display);line-height:1.1;text-wrap:balance;margin:0}
+a{color:var(--blue)}
+button,input,select,textarea{font:inherit}
+:focus-visible{outline:3px solid var(--blue-2);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-inline:20px}
+.demo-bar{background:var(--warn-bg);color:var(--warn-fg);font-size:13.5px;font-weight:600;text-align:center;padding:8px 16px}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:16px;min-height:66px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:22px;color:var(--fg);text-decoration:none;cursor:pointer;background:none;border:0;padding:0}
+.brand small{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.08em;color:var(--blue);border:1px solid var(--blue);border-radius:4px;padding:1px 5px}
+.nav{display:flex;gap:6px;margin-left:auto;align-items:center;flex-wrap:wrap}
+.nav button{background:none;border:0;color:var(--muted);font-weight:600;padding:8px 10px;border-radius:8px;cursor:pointer}
+.nav button:hover{color:var(--fg);background:var(--ice)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;border-radius:999px;padding:12px 22px;font-weight:700;cursor:pointer;text-decoration:none;transition:transform .15s,background .15s}
+.btn-primary{background:var(--blue);color:var(--onblue)}
+.btn-primary:hover{background:var(--blue-2)}
+.btn-ghost{background:transparent;color:var(--blue);border:1.5px solid var(--blue)}
+.btn-white{background:#fff;color:#0A2350}
+.btn:active{transform:translateY(1px)}
+.btn-sm{padding:8px 14px;font-size:14px}
+
+/* hero */
+.hero{background:linear-gradient(160deg,var(--navy) 0%,#123C8C 70%,#1C5BD9 100%);color:#fff;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;inset:auto -10% -1px -10%;height:70px;background:var(--bg);border-radius:50% 50% 0 0/100% 100% 0 0}
+.hero .wrap{display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center;padding-block:56px 96px;position:relative;z-index:1}
+.eyebrow{font-family:var(--mono);font-size:12.5px;letter-spacing:.12em;text-transform:uppercase;color:#A9C6FF}
+.hero h1{font-size:clamp(36px,5.4vw,62px);font-weight:800;margin:14px 0 18px;letter-spacing:-.02em}
+.hero h1 em{font-style:normal;color:#9FC1FF}
+.hero p.lead{font-size:18px;color:#D4E2FF;max-width:52ch;margin:0 0 26px}
+.hero-cta{display:flex;gap:12px;flex-wrap:wrap}
+.hero-stats{display:flex;gap:28px;margin-top:34px;flex-wrap:wrap}
+.hero-stats div{font-size:13px;color:#B9CDF5}
+.hero-stats b{display:block;font-family:var(--display);font-size:26px;color:#fff}
+.hero-art{position:relative;min-width:0}
+.hero-art svg{width:100%;height:auto;max-width:460px;display:block;margin-inline:auto}
+
+/* estimator */
+.est{background:var(--card);color:var(--fg);border-radius:18px;padding:22px;box-shadow:0 20px 50px rgba(5,20,60,.28);margin-top:-170px;position:relative;z-index:2;max-width:420px;margin-left:auto}
+.est h3{font-size:18px;margin-bottom:12px}
+.est label{font-size:13px;font-weight:600;color:var(--muted);display:block;margin-top:10px}
+.est .row{display:flex;justify-content:space-between;align-items:baseline}
+.est output{font-family:var(--mono);font-weight:600;color:var(--fg)}
+.est input[type=range]{width:100%;accent-color:var(--blue)}
+.est .pay{margin-top:14px;padding-top:14px;border-top:1px dashed var(--line);display:flex;justify-content:space-between;align-items:baseline}
+.est .pay b{font-family:var(--display);font-size:30px;color:var(--blue)}
+.est select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);margin-top:4px}
+
+/* rates */
+section.rates{padding-block:36px 64px}
+.sec-head{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;margin-bottom:18px}
+.sec-head h2{font-size:clamp(28px,3.4vw,40px)}
+.sec-head p{color:var(--muted);margin:6px 0 0;max-width:60ch}
+.tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search{flex:1 1 240px;padding:11px 14px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--fg)}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.chip{border:1px solid var(--line);background:var(--bg);color:var(--fg);padding:7px 13px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--blue);border-color:var(--blue);color:var(--onblue)}
+.cos-toggle{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.loan{border:1px solid var(--line);border-radius:var(--r);padding:16px;background:var(--card);display:flex;flex-direction:column;gap:10px;min-width:0;transition:border-color .15s,box-shadow .15s}
+.loan:hover{border-color:var(--blue-2);box-shadow:0 8px 24px rgba(28,91,217,.12)}
+.loan .cat{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--blue)}
+.loan h3{font-size:19px;font-weight:700}
+.loan .apr{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
+.loan .apr b{font-size:22px;font-family:var(--display);color:var(--fg)}
+.loan dl{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;margin:0;font-size:13.5px}
+.loan dt{color:var(--muted)} .loan dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;padding:4px 9px;border-radius:999px;align-self:flex-start}
+.badge.cos{background:var(--warn-bg);color:var(--warn-fg)}
+.badge.solo{background:var(--ok-bg);color:var(--ok)}
+.loan .btn{margin-top:auto}
+.empty{color:var(--muted);padding:30px;text-align:center;border:1px dashed var(--line);border-radius:var(--r)}
+.note{font-size:13px;color:var(--muted);margin-top:18px;max-width:80ch}
+
+.reqs{background:var(--ice);padding-block:48px}
+.reqs .cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px;margin-top:22px}
+.req{background:var(--card);border-radius:var(--r);padding:20px;border:1px solid var(--line)}
+.req h3{font-size:18px;margin-bottom:8px}
+.req ul{margin:0;padding-left:18px;color:var(--muted);font-size:14.5px}
+.req.hl{border:2px solid var(--blue)}
+
+footer{background:var(--navy);color:#B9CDF5;font-size:13.5px;padding-block:30px 90px}
+footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+
+/* auth & app shared */
+.page{padding-block:40px 80px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;max-width:460px;margin:0 auto;box-shadow:0 10px 40px rgba(10,35,80,.08)}
+.tabs{display:flex;background:var(--ice);border-radius:999px;padding:4px;margin-bottom:20px}
+.tabs button{flex:1;border:0;background:none;padding:9px;border-radius:999px;font-weight:700;color:var(--muted);cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--card);color:var(--fg);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:13.5px;font-weight:600}
+.field .hint{font-size:12px;color:var(--muted)}
+.field input,.field select,.field textarea{padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg);width:100%}
+.field input:disabled{background:var(--ice);color:var(--muted);cursor:not-allowed}
+.stack{display:flex;flex-direction:column;gap:14px}
+.code-boxes{display:flex;gap:8px;justify-content:center;margin:16px 0}
+.code-boxes input{width:46px;height:56px;text-align:center;font-family:var(--mono);font-size:24px;border:1.5px solid var(--line);border-radius:10px;background:var(--bg);color:var(--fg)}
+.inbox{margin-top:20px;border:1px dashed var(--blue-2);border-radius:12px;padding:14px;background:var(--ice);font-size:14px}
+.inbox .from{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.inbox .code{font-family:var(--mono);font-size:26px;font-weight:600;letter-spacing:.2em;color:var(--blue)}
+.err{color:#C2333A;font-size:13.5px;font-weight:600}
+:root[data-theme="dark"] .err{color:#FF8A8F}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .err{color:#FF8A8F}}
+
+/* application */
+.app-layout{display:grid;grid-template-columns:240px 1fr;gap:28px;align-items:start}
+.steps{position:sticky;top:calc(env(safe-area-inset-top,0px) + 86px);display:flex;flex-direction:column;gap:2px;font-size:14px}
+.steps a{color:var(--muted);text-decoration:none;padding:7px 10px;border-radius:8px;border-left:3px solid transparent}
+.steps a:hover{background:var(--ice);color:var(--fg);border-left-color:var(--blue)}
+fieldset{border:1px solid var(--line);border-radius:var(--r);padding:22px;margin:0 0 18px;background:var(--card);min-width:0}
+legend{font-family:var(--display);font-weight:700;font-size:20px;padding:0 8px}
+.fs-desc{color:var(--muted);font-size:14px;margin:-4px 0 16px}
+.g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.full{grid-column:1/-1}
+.radio-row{display:flex;gap:14px;flex-wrap:wrap;font-size:14.5px}
+.radio-row label{display:flex;gap:6px;align-items:center;font-weight:500}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14px;margin-bottom:10px}
+.check input{margin-top:4px;accent-color:var(--blue)}
+.secure-note{font-size:12.5px;color:var(--warn-fg);background:var(--warn-bg);padding:8px 12px;border-radius:8px;margin-bottom:14px}
+.summary-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--sky);border-radius:var(--r);padding:14px 18px;margin-bottom:18px}
+.summary-bar b{font-family:var(--display)}
+.done{text-align:center;max-width:560px;margin:0 auto}
+.done .tick{width:72px;height:72px;border-radius:50%;background:var(--ok-bg);color:var(--ok);display:grid;place-items:center;margin:0 auto 16px;font-size:38px}
+
+/* chat */
+.chat-fab{position:fixed;right:20px;bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:50;display:flex;align-items:center;gap:10px;background:var(--blue);color:#fff;border:0;border-radius:999px;padding:14px 20px;font-weight:700;box-shadow:0 10px 30px rgba(28,91,217,.45);cursor:pointer;animation:bob 3.5s ease-in-out infinite}
+.chat-fab .dot{width:10px;height:10px;border-radius:50%;background:#5BE49B;box-shadow:0 0 0 3px rgba(91,228,155,.3)}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.chat{position:fixed;right:20px;bottom:calc(88px + env(safe-area-inset-bottom,0px));z-index:50;width:min(370px,calc(100vw - 32px));height:min(520px,calc(100vh - 140px));background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:0 20px 60px rgba(5,20,60,.3);display:flex;flex-direction:column;overflow:hidden}
+.chat-head{background:var(--navy);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}
+.chat-head .av{width:36px;height:36px;border-radius:50%;background:#2E6BE6;display:grid;place-items:center;font-weight:700}
+.chat-head small{display:block;color:#A9C6FF;font-size:12px}
+.chat-head button{margin-left:auto;background:none;border:0;color:#fff;font-size:22px;cursor:pointer;line-height:1}
+.chat-body{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:8px;background:var(--ice)}
+.msg{max-width:82%;padding:9px 13px;border-radius:14px;font-size:14.5px}
+.msg.agent{background:var(--card);border:1px solid var(--line);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.me{background:var(--blue);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.msg.sys{align-self:center;font-size:12px;color:var(--muted);background:none;padding:2px}
+.quick{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px 0;background:var(--card)}
+.quick button{font-size:12.5px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:999px;padding:5px 10px;cursor:pointer}
+.chat form{display:flex;gap:8px;padding:10px 12px;background:var(--card)}
+.chat form input{flex:1;min-width:0;padding:10px 12px;border:1px solid var(--line);border-radius:999px;background:var(--bg);color:var(--fg)}
+.typing{font-style:italic;color:var(--muted)}
+
+@media (max-width:860px){
+  .hero .wrap{grid-template-columns:1fr;padding-block:36px 90px}
+  .hero-art svg{max-width:320px}
+  .est{margin:-60px auto 0;max-width:none}
+  .app-layout{grid-template-columns:1fr}
+  .steps{position:static;flex-direction:row;flex-wrap:wrap}
+  .g3{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:520px){
+  .g2,.g3{grid-template-columns:1fr}
+  .nav .hide-sm{display:none}
+  fieldset{padding:16px}
+  .code-boxes input{width:40px;height:50px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="demo-bar" role="note">Design demo only. Harborline Lending is fictional. No real loans are offered and nothing you enter is stored or sent.</div>
+
+<header class="top">
+  <div class="wrap">
+    <button class="brand" data-go="home" aria-label="Harborline Lending home">
+      <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="16" fill="var(--blue)"/><path d="M16 7.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5Zm-1 5h2v12.2c3.2-.4 5.6-2.5 6.3-5.2l-2.1.4 3.3-3.7 1.3 4.8-1.4-1.4c-1 4-4.9 6.9-9.4 6.9s-8.4-2.9-9.4-6.9l-1.4 1.4 1.3-4.8 3.3 3.7-2.1-.4c.7 2.7 3.1 4.8 6.3 5.2V16h-3v-2h3z" fill="#fff"/></svg>
+      Harborline <small>DEMO</small>
+    </button>
+    <nav class="nav" aria-label="Main">
+      <button class="hide-sm" data-go="home" data-scroll="rates">Rates</button>
+      <button class="hide-sm" data-go="home" data-scroll="reqs">Requirements</button>
+      <button id="navAuth" data-go="auth">Sign in</button>
+      <button class="btn btn-primary btn-sm" data-apply="">Apply now</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+<!-- ============ DASHBOARD ============ -->
+<div id="view-home">
+  <section class="hero">
+    <div class="wrap">
+      <div>
+        <div class="eyebrow">57 loan types · one application</div>
+        <h1>Steady money for <em>every season</em> of life.</h1>
+        <p class="lead">Personal, student, auto, home, business and farm financing with clear rates, no surprise fees, and a real person on the other end of the chat.</p>
+        <div class="hero-cta">
+          <button class="btn btn-white" data-apply="">Apply now</button>
+          <button class="btn btn-ghost" style="color:#fff;border-color:#fff" data-scroll="rates">Compare rates</button>
+        </div>
+        <div class="hero-stats">
+          <div><b>3.00%</b>lowest secured APR</div>
+          <div><b>$500–$2M</b>loan amounts</div>
+          <div><b>24 hrs</b>typical decision</div>
+        </div>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 440 440">
+          <circle cx="220" cy="220" r="200" fill="#2E6BE6" opacity=".35"/>
+          <circle cx="220" cy="220" r="150" fill="#5B8FF2" opacity=".35"/>
+          <!-- body -->
+          <path d="M100 440c0-90 54-150 120-150s120 60 120 150z" fill="#FFFFFF"/>
+          <path d="M150 440c4-70 30-112 70-112s66 42 70 112z" fill="#1C5BD9"/>
+          <path d="M196 292h48v30c0 14-48 14-48 0z" fill="#C98B62"/>
+          <!-- head -->
+          <circle cx="220" cy="200" r="98" fill="#2A1B14"/>
+          <circle cx="160" cy="170" r="40" fill="#2A1B14"/><circle cx="282" cy="168" r="42" fill="#2A1B14"/>
+          <circle cx="175" cy="125" r="38" fill="#2A1B14"/><circle cx="262" cy="122" r="38" fill="#2A1B14"/>
+          <ellipse cx="220" cy="222" rx="62" ry="72" fill="#D99A6C"/>
+          <path d="M160 190c10-40 40-58 60-58s52 14 62 54c-20-14-38-22-62-22s-44 10-60 26z" fill="#2A1B14"/>
+          <ellipse cx="196" cy="222" rx="6" ry="7.5" fill="#1A120D"/><ellipse cx="244" cy="222" rx="6" ry="7.5" fill="#1A120D"/>
+          <path d="M186 206q10-7 20 0M234 206q10-7 20 0" stroke="#2A1B14" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <path d="M194 256q26 22 52 0" stroke="#FFFFFF" stroke-width="9" fill="#7A2E2A" stroke-linecap="round"/>
+          <circle cx="178" cy="246" r="9" fill="#E8836F" opacity=".45"/><circle cx="262" cy="246" r="9" fill="#E8836F" opacity=".45"/>
+          <circle cx="158" cy="232" r="6" fill="#F4C842"/><circle cx="282" cy="232" r="6" fill="#F4C842"/>
+          <!-- arm + phone -->
+          <path d="M300 440c10-50 24-80 40-96l26 18c-10 30-24 60-40 78z" fill="#FFFFFF"/>
+          <rect x="332" y="300" width="58" height="96" rx="10" fill="#0A2350" transform="rotate(10 361 348)"/>
+          <rect x="339" y="310" width="44" height="72" rx="5" fill="#E7EFFD" transform="rotate(10 361 348)"/>
+          <circle cx="358" cy="344" r="12" fill="#2BB673" transform="rotate(10 361 348)"/>
+          <path d="M352 344l5 5 9-10" stroke="#fff" stroke-width="3.5" fill="none" stroke-linecap="round" transform="rotate(10 361 348)"/>
+          <ellipse cx="350" cy="380" rx="18" ry="14" fill="#D99A6C"/>
+          <!-- floating card -->
+          <g transform="translate(18 300)">
+            <rect width="132" height="58" rx="12" fill="#FFFFFF"/>
+            <text x="14" y="24" font-family="IBM Plex Mono,monospace" font-size="11" fill="#52627E">FUNDS SENT</text>
+            <text x="14" y="46" font-family="Bricolage Grotesque,sans-serif" font-size="20" font-weight="800" fill="#0A2350">$18,500</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <div class="wrap">
+    <form class="est" id="est" aria-labelledby="estH" onsubmit="return false">
+      <h3 id="estH">Estimate your monthly payment</h3>
+      <label for="estLoan">Loan type</label>
+      <select id="estLoan"></select>
+      <label for="estAmt"><span class="row"><span>Amount</span><output id="estAmtO"></output></span></label>
+      <input type="range" id="estAmt" min="1000" max="100000" step="500" value="18500">
+      <label for="estTerm"><span class="row"><span>Term</span><output id="estTermO"></output></span></label>
+      <input type="range" id="estTerm" min="6" max="84" step="6" value="48">
+      <div class="pay"><span>Est. at <span id="estApr" style="font-family:var(--mono)"></span> APR</span><b id="estPay"></b></div>
+      <button type="button" class="btn btn-primary" style="width:100%;margin-top:14px" id="estApply">Apply for this loan</button>
+    </form>
+  </div>
+
+  <section class="rates" id="rates">
+    <div class="wrap">
+      <div class="sec-head">
+        <div>
+          <h2>Today's sample rates</h2>
+          <p>Starting APRs shown for applicants with excellent credit and autopay. Your rate depends on credit, income, term and collateral.</p>
+        </div>
+      </div>
+      <div class="tools">
+        <input class="search" id="q" type="search" placeholder="Search loans, e.g. HELOC, solar, VA" aria-label="Search loans">
+        <label class="cos-toggle"><input type="checkbox" id="cosOnly"> Show only loans that need a cosigner</label>
+      </div>
+      <div class="chips" id="chips" role="group" aria-label="Filter by category"></div>
+      <div class="grid" id="grid"></div>
+      <p class="note">Rates are illustrative for this design demo and follow the pattern of published online-lender ranges as of October 2026. Short-term products are shown capped at 36% APR. APR = annual percentage rate.</p>
+    </div>
+  </section>
+
+  <section class="reqs" id="reqs">
+    <div class="wrap">
+      <h2 style="font-size:clamp(26px,3vw,36px)">Loan requirements</h2>
+      <p style="color:var(--muted);margin:6px 0 0;max-width:65ch">What every applicant needs, and when a cosigner comes into play.</p>
+      <div class="cols">
+        <div class="req"><h3>Every applicant</h3><ul><li>18+ (19 in AL and NE) and a U.S. citizen or permanent resident</li><li>Government-issued photo ID</li><li>Verifiable income (pay stubs, W-2s or tax returns)</li><li>Active checking account and email</li><li>Debt-to-income ratio under 45%</li></ul></div>
+        <div class="req hl"><h3>Cosigner required</h3><ul><li>Marked with a yellow <b>Cosigner</b> badge on each loan</li><li>Cosigner credit score of <b>650 or higher</b></li><li>Steady income and U.S. residency</li><li>Must complete the cosigner section of the application</li><li>Equally responsible for repayment</li></ul></div>
+        <div class="req"><h3>Secured loans</h3><ul><li>Collateral details: vehicle, property, savings, CD or securities</li><li>Proof of ownership or account statements</li><li>Insurance on vehicles and property</li></ul></div>
+        <div class="req"><h3>Business &amp; farm</h3><ul><li>2 years of business tax returns (startups: business plan)</li><li>Profit &amp; loss and balance sheet</li><li>Personal guarantee from 20%+ owners</li><li>EIN and business bank statements</li></ul></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============ AUTH ============ -->
+<div id="view-auth" hidden>
+  <div class="wrap page">
+    <div class="panel" id="authPanel">
+      <div class="tabs" role="tablist">
+        <button role="tab" id="tabIn" aria-selected="true">Sign in</button>
+        <button role="tab" id="tabUp" aria-selected="false">Create account</button>
+      </div>
+      <form id="formIn" class="stack" novalidate>
+        <h2 style="font-size:26px">Welcome back</h2>
+        <div class="field"><label for="inEmail">Email</label><input id="inEmail" type="email" autocomplete="off" placeholder="you@example.com" required></div>
+        <div class="field"><label for="inPass">Password</label><input id="inPass" type="password" autocomplete="off" placeholder="Use any sample text" required></div>
+        <p class="err" id="inErr" hidden></p>
+        <button class="btn btn-primary" type="submit">Sign in</button>
+        <p style="font-size:13px;color:var(--muted);margin:0">We'll email a 6-digit activation code to confirm it's you.</p>
+      </form>
+      <form id="formUp" class="stack" novalidate hidden>
+        <h2 style="font-size:26px">Create your account</h2>
+        <div class="g2"><div class="field"><label for="upFirst">First name</label><input id="upFirst" required></div><div class="field"><label for="upLast">Last name</label><input id="upLast" required></div></div>
+        <div class="field"><label for="upEmail">Email</label><input id="upEmail" type="email" autocomplete="off" required></div>
+        <div class="field"><label for="upPhone">Mobile phone</label><input id="upPhone" type="tel" placeholder="(555) 010-0000"></div>
+        <div class="field"><label for="upPass">Password</label><input id="upPass" type="password" autocomplete="off" required><span class="hint">8+ characters with a number</span></div>
+        <label class="check"><input type="checkbox" id="upTerms"> I agree to the Terms of Use, Privacy Policy and E-Sign consent.</label>
+        <p class="err" id="upErr" hidden></p>
+        <button class="btn btn-primary" type="submit">Create account</button>
+      </form>
+      <form id="formCode" class="stack" novalidate hidden>
+        <h2 style="font-size:26px">Check your email</h2>
+        <p style="margin:0;color:var(--muted)">We sent a 6-digit activation code to <b id="codeTo"></b>. It expires in 10 minutes.</p>
+        <div class="code-boxes" id="codeBoxes"></div>
+        <p class="err" id="codeErr" hidden></p>
+        <button class="btn btn-primary" type="submit">Verify and continue</button>
+        <button class="btn btn-ghost" type="button" id="resend">Resend code</button>
+        <div class="inbox" aria-live="polite">
+          <div style="font-weight:700;margin-bottom:6px">Simulated inbox (demo)</div>
+          <div class="from">From: Harborline Lending &lt;verify@harborline-lending.example&gt;</div>
+          <div class="from">Subject: Your Harborline activation code</div>
+          <div class="code" id="codeShow"></div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:6px">On a live site this email is sent by your server through an email service from your own domain. In this demo the code only appears here.</div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APPLICATION ============ -->
+<div id="view-apply" hidden>
+  <div class="wrap page">
+    <h1 style="font-size:clamp(30px,4vw,44px);margin-bottom:8px">Loan application</h1>
+    <p style="color:var(--muted);margin:0 0 20px">About 15 minutes. Fields marked * are required. Sensitive ID and account numbers are greyed out in this demo.</p>
+    <div class="summary-bar" id="appSummary"></div>
+    <div class="app-layout">
+      <nav class="steps" aria-label="Application sections">
+        <a href="#s-loan">1. Loan request</a><a href="#s-personal">2. Personal details</a><a href="#s-address">3. Address &amp; housing</a><a href="#s-identity">4. Identity &amp; citizenship</a><a href="#s-employ">5. Employment &amp; income</a><a href="#s-finance">6. Assets &amp; debts</a><a href="#s-history">7. Credit history</a><a href="#s-specific" id="lnkSpecific">8. Loan details</a><a href="#s-cosigner">9. Cosigner</a><a href="#s-refs">10. References</a><a href="#s-docs">11. Documents</a><a href="#s-consent">12. Review &amp; consent</a>
+      </nav>
+      <form id="appForm" novalidate style="min-width:0">
+        <fieldset id="s-loan"><legend>1. Loan request</legend>
+          <div class="g2">
+            <div class="field full"><label for="aType">Loan type *</label><select id="aType" required></select></div>
+            <div class="field"><label for="aAmt">Amount requested ($) *</label><input id="aAmt" type="number" min="500" step="100" required></div>
+            <div class="field"><label for="aTerm">Preferred term *</label><select id="aTerm"><option>6 months</option><option>12 months</option><option>24 months</option><option>36 months</option><option selected>48 months</option><option>60 months</option><option>72 months</option><option>84 months</option><option>10 years</option><option>15 years</option><option>20 years</option><option>30 years</option></select></div>
+            <div class="field"><label for="aPurpose">Primary purpose *</label><select id="aPurpose"><option>Debt consolidation</option><option>Home improvement</option><option>Major purchase</option><option>Medical expenses</option><option>Education</option><option>Vehicle</option><option>Home purchase</option><option>Business</option><option>Emergency</option><option>Other</option></select></div>
+            <div class="field"><label for="aWhen">When do you need funds? *</label><select id="aWhen"><option>Within 24 hours</option><option>Within a week</option><option>Within 30 days</option><option>Just comparing</option></select></div>
+            <div class="field full"><label for="aDesc">Describe how you'll use the funds</label><textarea id="aDesc" rows="2"></textarea></div>
+            <div class="field"><label for="aAutopay">Enroll in autopay (0.25% rate discount)?</label><select id="aAutopay"><option>Yes</option><option>No</option></select></div>
+            <div class="field"><label for="aJoint">Applying jointly with a co-borrower?</label><select id="aJoint"><option>No</option><option>Yes</option></select></div>
+          </div>
+        </fieldset>
+
+        <fieldset id="s-personal"><legend>2. Personal details</legend>
+          <div class="g3">
+            <div class="field"><label for="pFirst">First name *</label><input id="pFirst" required></div>
+            <div class="field"><label for="pMid">Middle name</label><input id="pMid"></div>
+            <div class="field"><label for="pLast">Last name *</label><input id="pLast" required></div>
+            <div class="field"><label for="pSuffix">Suffix</label><select id="pSuffix"><option>None</option><option>Jr.</option><option>Sr.</option><option>II</option><option>III</option></select></div>
+            <div class="field"><label for="pPrev">Previous / maiden name</label><input id="pPrev"></div>
+            <div class="field"><label for="pDob">Date of birth *</label><input id="pDob" type="date" required></div>
+            <div class="field"><label for="pEmail">Email *</label><input id="pEmail" type="email" required></div>
+            <div class="field"><label for="pPhone">Mobile phone *</label><input id="pPhone" type="tel" required></div>
+            <div class="field"><label for="pAlt">Alternate phone</label><input id="pAlt" type="tel"></div>
+            <div class="field"><label for="pMarital">Marital status *</label><select id="pMarital"><option>Single</option><option>Married</option><option>Separated</option><option>Divorced</option><option>Widowed</option></select></div>
+            <div class="field"><label for="pDeps">Number of dependents</label><input id="pDeps" type="number" min="0" value="0"></div>
+            <div class="field"><label for="pContact">Preferred contact method</label><select id="pContact"><option>Email</option><option>Phone</option><option>Text</option></select></div>
+            <div class="field"><label for="pMil">Military status *</label><select id="pMil"><option>Never served</option><option>Active duty</option><option>Veteran</option><option>Reserve / National Guard</option><option>Surviving spouse</option><option>Dependent of active duty</option></select><span class="hint">Required for Military Lending Act protections</span></div>
+            <div class="field"><label for="pLang">Preferred language</label><select id="pLang"><option>English</option><option>Spanish</option><option>Other</option></select></div>
+          </div>
+        </fieldset>
+
+        <fieldset id="s-address"><legend>3. Address &amp; housing</legend>
+          <div class="g3">
+            <div class="field full"><label for="hStreet">Street address *</label><input id="hStreet" required></div>
+            <div class="field"><label for="hUnit">Apt / unit</label><input id="hUnit"></div>
+            <div class="field"><label for="hCity">City *</label><input id="hCity" required></div>
+            <div class="field"><label for="hState">State *</label><input id="hState" maxlength="2" placeholder="MI"></div>
+            <div class="field"><label for="hZip">ZIP *</label><input id="hZip" inputmode="numeric" maxlength="10"></div>
+            <div class="field"><label for="hYears">Years at address *</label><input id="hYears" type="number" min="0"></div>
+            <div class="field"><label for="hStatus">Housing status *</label><select id="hStatus"><option>Rent</option><option>Own with mortgage</option><option>Own outright</option><option>Live with family</option><option>Other</option></select></div>
+            <div class="field"><label for="hPay">Monthly rent / mortgage ($) *</label><input id="hPay" type="number" min="0"></div>
+            <div class="field full"><label for="hPrevAddr">Previous address (if under 2 years at current)</label><input id="hPrevAddr"></div>
+            <div class="field full"><label for="hMail">Mailing address, if different</label><input id="hMail"></div>
+          </div>
+        </fieldset>
+
+        <fieldset id="s-identity"><legend>4. Identity &amp; citizenship</legend>
+          <p class="secure-note">Demo: number fields below are disabled. A live lender collects these over an encrypted connection and verifies them with a credit bureau.</p>
+          <div class="g3">
+            <div class="field"><label for="iSsn">Social Security number *</label><input id="iSsn" placeholder="XXX-XX-XXXX" disabled></div>
+            <div class="field"><label for="iCit">Citizenship *</label><select id="iCit"><option>U.S. citizen</option><option>Permanent resident</option><option>Non-permanent resident</option></select></div>
+            <div class="field"><label for="iIdType">ID type *</label><select id="iIdType"><option>Driver's license</option><option>State ID</option><option>U.S. passport</option><option>Military ID</option></select></div>
+            <div class="field"><label for="iIdNum">ID number *</label><input id="iIdNum" placeholder="Disabled in demo" disabled></div>
+            <div class="field"><label for="iIdState">Issuing state</label><input id="iIdState" maxlength="2"></div>
+            <div class="field"><label for="iIdExp">ID expiration date *</label><input id="iIdExp" type="date"></div>
+          </div>
+        </fieldset>
+
+        <fieldset id="s-employ"><legend>5. Employment &amp; income</legend>
+          <div class="g3">
+            <div class="field"><label for="eStatus">Employment status *</label><select id="eStatus"><option>Full-time</option><option>Part-time</option><option>Self-employed</option><option>Contractor / gig</option><option>Retired</option><option>Student</option><option>Unemployed</option><option>Military</option></select></div>
+            <div class="field"><label for="eEmployer">Employer / business name *</label><input id="eEmployer"></div>
+            <div class="field"><label for="eTitle">Job title *</label><input id="eTitle"></div>
+            <div class="field"><label for="eStart">Start date *</label><input id="eStart" type="date"></div>
+            <div class="field"><label for="ePhone">Employer phone</label><input id="ePhone" type="tel"></div>
+            <div class="field"><label for="eAddr">Employer address</label><input id="eAddr"></div>
+            <div class="field"><label for="eIncome">Gross annual income ($) *</label><input id="eIncome" type="number" min="0"></div>
+            <div class="field"><label for="eFreq">Pay frequency *</label><select id="eFreq"><option>Weekly</option><option>Biweekly</option><option>Semi-monthly</option><option>Monthly</option><option>Irregular</option></select></div>
+            <div class="field"><label for="eNext">Next pay date</label><input id="eNext" type="date"></div>
+            <div class="field"><label for="eOther">Other income ($/yr)</label><input id="eOther" type="number" min="0"></div>
+            <div class="field"><label for="eOtherSrc">Other income source</label><select id="eOtherSrc"><option>None</option><option>Alimony / child support</option><option>Social Security</option><option>Pension</option><option>Rental income</option><option>Disability</option><option>Investments</option><option>Side business</option></select><span class="hint">Alimony or child support need not be disclosed unless you want it considered.</span></div>
+            <div class="field"><label for="ePrevEmp">Previous employer (if under 2 years)</label><input id="ePrevEmp"></div>
+          </div>
+        </fieldset>
+
+        <fieldset id="s-finance"><legend>6. Assets &amp; debts</legend>
+          <div class="g3">
+            <div class="field"><label for="fBank">Bank name *</label><input id="fBank"></div>
+            <div class="field"><label for="fAcctType">Account type *</label><select id="fAcctType"><option>Checking</option><option>Savings</option></select></div>
+            <div class="field"><label for="fRouting">Routing number *</label><input id="fRouting" placeholder="Disabled in demo" disabled></div>
+            <div class="field"><label for="fAcct">Account number *</label><input id="fAcct" placeholder="Disabled in demo" disabled></div>
+            <div class="field"><label for="fCash">Checking &amp; savings balance ($)</label><input id="fCash" type="number" min="0"></div>
+            <div class="field"><label for="fInvest">Retirement &amp; investments ($)</label><input id="fInvest" type="number" min="0"></div>
+            <div class="field"><label for="fRealEst">Real estate value owned ($)</label><input id="fRealEst" type="number" min="0"></div>
+            <div class="field"><label for="fVehVal">Vehicles owned value ($)</label><input id="fVehVal" type="number" min="0"></div>
+            <div class="field"><label for="fCards">Credit card payments ($/mo)</label><input id="fCards" type="number" min="0"></div>
+            <div class="field"><label for="fAuto">Auto loan payments ($/mo)</label><input id="fAuto" type="number" min="0"></div>
+            <div class="field"><label for="fStudent">Student loan payments ($/mo)</label><input id="fStudent" type="number" min="0"></div>
+            <div class="field"><label for="fOtherDebt">Other loan payments ($/mo)</label><input id="fOtherDebt" type="number" min="0"></div>
+            <div class="field"><label for="fSupport">Child support / alimony paid ($/mo)</label><input id="fSupport" type="number" min="0"></div>
+            <div class="field"><label for="fTotalDebt">Total outstanding debt ($)</label><input id="fTotalDebt" type="number" min="0"></div>
+            <div class="field"><label>Debt-to-income (estimated)</label><input id="fDti" readonly placeholder="Calculated"></div>
+          </div>
+        </fieldset>
+
+        <fieldset id="s-history"><legend>7. Credit history &amp; declarations</legend>
+          <div class="g2">
+            <div class="field"><label for="cScore">Estimated credit score *</label><select id="cScore"><option>800+ Exceptional</option><option>740–799 Very good</option><option>670–739 Good</option><option>650–669 Fair</option><option>580–649 Fair</option><option>Below 580</option><option>No credit history</option></select></div>
+            <div class="field"><label for="cInq">Hard inquiries in last 6 months</label><select id="cInq"><option>0</option><option>1–2</option><option>3–5</option><option>6+</option></select></div>
+          </div>
+          <div class="stack" style="margin-top:14px;gap:10px" id="declarations"></div>
+        </fieldset>
+
+        <fieldset id="s-specific"><legend id="specLegend">8. Loan details</legend>
+          <p class="fs-desc" id="specDesc"></p>
+          <div class="g3" id="specFields"></div>
+        </fieldset>
+
+        <fieldset id="s-cosigner"><legend>9. Cosigner</legend>
+          <p class="fs-desc" id="cosDesc"></p>
+          <div class="radio-row" id="cosAddRow" style="margin-bottom:14px"><label><input type="radio" name="cosAdd" value="no" checked> No cosigner</label><label><input type="radio" name="cosAdd" value="yes"> Add a cosigner</label></div>
+          <div class="g3" id="cosFields" hidden>
+            <div class="field"><label for="kName">Cosigner full name *</label><input id="kName"></div>
+            <div class="field"><label for="kRel">Relationship *</label><select id="kRel"><option>Parent</option><option>Spouse</option><option>Sibling</option><option>Relative</option><option>Friend</option><option>Business partner</option></select></div>
+            <div class="field"><label for="kDob">Date of birth *</label><input id="kDob" type="date"></div>
+            <div class="field"><label for="kEmail">Email *</label><input id="kEmail" type="email"></div>
+            <div class="field"><label for="kPhone">Phone *</label><input id="kPhone" type="tel"></div>
+            <div class="field"><label for="kSsn">Cosigner SSN *</label><input id="kSsn" placeholder="Disabled in demo" disabled></div>
+            <div class="field full"><label for="kAddr">Address *</label><input id="kAddr"></div>
+            <div class="field"><label for="kScore">Credit score *</label><select id="kScore"><option>800+</option><option>740–799</option><option>700–739</option><option>650–699</option><option>Below 650</option></select></div>
+            <div class="field"><label for="kEmp">Employer *</label><input id="kEmp"></div>
+            <div class="field"><label for="kInc">Gross annual income ($) *</label><input id="kInc" type="number" min="0"></div>
+            <div class="field"><label for="kHousing">Housing payment ($/mo)</label><input id="kHousing" type="number" min="0"></div>
+            <div class="field"><label for="kDebt">Other monthly debts ($)</label><input id="kDebt" type="number" min="0"></div>
+            <div class="field"><label for="kCit">Citizenship</label><select id="kCit"><option>U.S. citizen</option><option>Permanent resident</option></select></div>
+            <p class="err full" id="cosErr" hidden>Cosigners must have a credit score of 650 or higher.</p>
+          </div>
+        </fieldset>
+
+        <fieldset id="s-refs"><legend>10. Personal references</legend>
+          <p class="fs-desc">Two people who know you and don't live with you.</p>
+          <div class="g3">
+            <div class="field"><label for="r1n">Reference 1 name</label><input id="r1n"></div><div class="field"><label for="r1r">Relationship</label><input id="r1r"></div><div class="field"><label for="r1p">Phone</label><input id="r1p" type="tel"></div>
+            <div class="field"><label for="r2n">Reference 2 name</label><input id="r2n"></div><div class="field"><label for="r2r">Relationship</label><input id="r2r"></div><div class="field"><label for="r2p">Phone</label><input id="r2p" type="tel"></div>
+          </div>
+        </fieldset>
+
+        <fieldset id="s-docs"><legend>11. Documents</legend>
+          <p class="fs-desc">Upload what you have now. You can send the rest after a conditional approval. Files stay in your browser in this demo.</p>
+          <div class="g2">
+            <div class="field"><label for="dId">Photo ID (front &amp; back)</label><input id="dId" type="file" multiple></div>
+            <div class="field"><label for="dPay">Last 2 pay stubs</label><input id="dPay" type="file" multiple></div>
+            <div class="field"><label for="dTax">Last 2 years W-2s or tax returns</label><input id="dTax" type="file" multiple></div>
+            <div class="field"><label for="dBank">Last 2 months bank statements</label><input id="dBank" type="file" multiple></div>
+            <div class="field"><label for="dAddr">Proof of address (utility bill or lease)</label><input id="dAddr" type="file"></div>
+            <div class="field"><label for="dOther">Loan-specific documents</label><input id="dOther" type="file" multiple><span class="hint" id="docHint">Purchase agreement, quote, enrollment letter, etc.</span></div>
+          </div>
+        </fieldset>
+
+        <fieldset id="s-consent"><legend>12. Review &amp; consent</legend>
+          <label class="check"><input type="checkbox" required id="c1"> I certify that the information in this application is true and complete.</label>
+          <label class="check"><input type="checkbox" required id="c2"> I authorize Harborline to obtain my credit report and verify my income, employment and identity.</label>
+          <label class="check"><input type="checkbox" required id="c3"> I consent to receive disclosures electronically (E-Sign Act).</label>
+          <label class="check"><input type="checkbox" required id="c4"> I have read the Privacy Notice, Truth in Lending disclosure and Terms of Use.</label>
+          <label class="check"><input type="checkbox" id="c5"> I agree to receive calls and texts about my application, including automated messages. Optional.</label>
+          <div class="g2" style="margin-top:8px">
+            <div class="field"><label for="sig">Electronic signature (type full name) *</label><input id="sig"></div>
+            <div class="field"><label for="sigDate">Date</label><input id="sigDate" readonly></div>
+          </div>
+          <p class="err" id="appErr" hidden></p>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px">
+            <button class="btn btn-primary" type="submit">Submit application</button>
+            <button class="btn btn-ghost" type="button" id="fillSample">Fill with sample data</button>
+          </div>
+        </fieldset>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DONE ============ -->
+<div id="view-done" hidden>
+  <div class="wrap page">
+    <div class="panel done" style="max-width:560px">
+      <div class="tick">✓</div>
+      <h2 style="font-size:30px;margin-bottom:10px">Application received</h2>
+      <p id="doneMsg" style="color:var(--muted)"></p>
+      <p style="font-size:13px;color:var(--warn-fg);background:var(--warn-bg);padding:10px;border-radius:8px">Demo: nothing was submitted or stored.</p>
+      <button class="btn btn-primary" data-go="home">Back to dashboard</button>
+    </div>
+  </div>
+</div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div><b style="color:#fff;font-family:var(--display);font-size:18px">Harborline Lending</b><br>Fictional company for a design demo. Not a lender. Equal Housing Opportunity notice shown for layout only.</div>
+    <div>NMLS # 000000 (placeholder)<br>support@harborline-lending.example</div>
+  </div>
+</footer>
+
+<!-- ============ CHAT ============ -->
+<button class="chat-fab" id="chatFab" aria-expanded="false" aria-controls="chat"><span class="dot"></span>Chat now</button>
+<section class="chat" id="chat" hidden aria-label="Live chat">
+  <div class="chat-head"><div class="av">DM</div><div><b>Dana M.</b><small>Loan specialist · demo agent</small></div><button id="chatClose" aria-label="Close chat">×</button></div>
+  <div class="chat-body" id="chatBody" aria-live="polite"></div>
+  <div class="quick" id="quick"></div>
+  <form id="chatForm"><input id="chatIn" placeholder="Type a message" aria-label="Message" autocomplete="off"><button class="btn btn-primary btn-sm" type="submit">Send</button></form>
+</section>
+
+<script>
+// [name, category, aprLow, aprHigh, termText, amountText, needsCosigner]
+const L=[
+["Personal loan","Personal",8.99,35.99,"12–84 mo","$1k–$50k",0],
+["Secured personal loan","Personal",6.99,24.99,"12–84 mo","$1k–$100k",0],
+["Unsecured personal loan","Personal",8.99,35.99,"12–72 mo","$1k–$50k",1],
+["Emergency loan","Short-term",11.99,35.99,"3–36 mo","$500–$10k",0],
+["Installment loan","Personal",9.99,35.99,"6–60 mo","$1k–$35k",0],
+["Student loan","Student",4.49,15.99,"5–20 yrs","$1k–cost of attendance",1],
+["Undergraduate student loan","Student",4.49,15.99,"5–15 yrs","$1k–cost of attendance",1],
+["Graduate student loan","Student",4.99,14.99,"5–20 yrs","$1k–cost of attendance",1],
+["Parent student loan","Student",5.49,13.99,"5–15 yrs","$1k–cost of attendance",0],
+["Student loan refinance","Refinance",4.99,9.99,"5–20 yrs","$5k–$500k",1],
+["Auto loan","Auto",5.99,18.99,"24–84 mo","$5k–$100k",0],
+["New car loan","Auto",5.49,14.99,"24–84 mo","$5k–$100k",0],
+["Used car loan","Auto",6.49,19.99,"24–72 mo","$5k–$75k",1],
+["Auto refinance loan","Refinance",5.99,17.99,"24–84 mo","$5k–$100k",0],
+["Lease buyout loan","Auto",6.49,17.99,"24–72 mo","$5k–$80k",0],
+["Mortgage","Home",6.125,7.25,"15–30 yrs","$50k–$806k",0],
+["FHA loan","Home",5.875,6.75,"15–30 yrs","Up to county limit",0],
+["VA loan","Home",5.75,6.5,"15–30 yrs","No VA cap with full entitlement",0],
+["USDA loan","Home",5.875,6.625,"30 yrs","Up to area limit",0],
+["Jumbo loan","Home",6.375,7.5,"15–30 yrs","$806k–$3M",0],
+["Construction loan","Home",7.5,9.5,"12–18 mo build","$100k–$2M",0],
+["Home equity loan","Home",7.49,11.99,"5–30 yrs","$10k–$500k",0],
+["HELOC","Credit line",7.99,12.49,"10-yr draw","$10k–$500k",0],
+["Business loan","Business",8.99,29.99,"1–10 yrs","$10k–$500k",0],
+["SBA loan","Business",9.75,14.75,"10–25 yrs","$50k–$5M",0],
+["Startup loan","Business",12.99,29.99,"1–5 yrs","$5k–$150k",1],
+["Working capital loan","Business",9.99,34.99,"3–24 mo","$10k–$500k",0],
+["Equipment financing","Business",7.99,24.99,"1–7 yrs","$5k–$2M",0],
+["Personal line of credit","Credit line",10.99,21.99,"Revolving","$1k–$25k",1],
+["Business line of credit","Credit line",9.99,29.99,"Revolving","$10k–$250k",0],
+["Debt consolidation loan","Personal",8.99,29.99,"24–84 mo","$2k–$50k",1],
+["Credit-builder loan","Secured",5.99,15.99,"6–24 mo","$300–$3k",0],
+["Payday loan","Short-term",24.99,35.99,"1–3 mo","$100–$1k",0],
+["Cash advance","Short-term",24.99,35.99,"1–3 mo","$100–$1.5k",0],
+["Salary advance","Short-term",0,15.99,"Next payday","$100–$1k",0],
+["Buy Now, Pay Later loan","Short-term",0,29.99,"6 wks–24 mo","$50–$10k",0],
+["Medical loan","Medical",9.99,29.99,"12–84 mo","$1k–$50k",0],
+["Dental financing","Medical",0,26.99,"6–60 mo","$500–$25k",0],
+["Fertility financing","Medical",7.99,24.99,"24–84 mo","$2k–$100k",0],
+["Cosmetic procedure financing","Medical",8.99,29.99,"12–60 mo","$1k–$50k",0],
+["Home improvement loan","Home",7.99,24.99,"24–144 mo","$2k–$100k",0],
+["Solar financing","Home",3.99,9.99,"10–25 yrs","$5k–$100k",0],
+["Wedding loan","Life events",8.99,29.99,"12–72 mo","$2k–$50k",1],
+["Vacation loan","Life events",9.99,29.99,"12–60 mo","$1k–$25k",0],
+["Relocation loan","Life events",9.99,29.99,"12–60 mo","$1k–$35k",0],
+["Adoption loan","Life events",6.99,19.99,"24–84 mo","$5k–$75k",0],
+["Funeral loan","Life events",9.99,29.99,"12–60 mo","$1k–$25k",0],
+["Agricultural loan","Agriculture",7.25,11.5,"1–30 yrs","$25k–$5M",0],
+["Farm operating loan","Agriculture",7.5,12,"12 mo","$10k–$1M",0],
+["Farm equipment loan","Agriculture",6.99,11.99,"3–10 yrs","$10k–$2M",0],
+["Land loan","Agriculture",7.99,12.5,"5–30 yrs","$25k–$2M",0],
+["Livestock loan","Agriculture",7.75,12.25,"1–7 yrs","$10k–$1M",0],
+["Mortgage refinance","Refinance",6.0,7.125,"10–30 yrs","$50k–$3M",0],
+["Personal loan refinance","Refinance",7.99,29.99,"24–84 mo","$2k–$50k",0],
+["Business refinance loan","Refinance",8.49,24.99,"1–10 yrs","$25k–$2M",0],
+["Savings-secured loan","Secured",3.49,6.99,"6–60 mo","Up to 100% of savings",0],
+["CD-secured loan","Secured",3.0,6.49,"Up to CD term","Up to 95% of CD",0],
+["Securities-backed loan","Secured",5.99,8.99,"Revolving","Up to 70% of portfolio",0],
+["Peer-to-peer loan","Personal",7.99,35.99,"36–60 mo","$1k–$40k",1]
+];
+const loans=L.map(([name,cat,lo,hi,term,amt,cos])=>({name,cat,lo,hi,term,amt,cos:!!cos}));
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const fmtApr=n=>n.toFixed(n%1?(String(n).split('.')[1].length>2?3:2):2)+'%';
+const money=n=>'$'+Math.round(n).toLocaleString('en-US');
+
+/* ---------- state & routing ---------- */
+let user=null, pending=null, wantLoan=null, code=null;
+const views=['home','auth','apply','done'];
+function go(v,scroll){views.forEach(x=>$('#view-'+x).hidden=x!==v);
+  if(scroll){requestAnimationFrame(()=>document.getElementById(scroll)?.scrollIntoView({behavior:'smooth'}))}else window.scrollTo({top:0});}
+document.addEventListener('click',e=>{
+  const g=e.target.closest('[data-go]'); if(g){e.preventDefault();if(g.dataset.go==='auth'&&user){logout();return}go(g.dataset.go,g.dataset.scroll);return}
+  const s=e.target.closest('[data-scroll]'); if(s){e.preventDefault();go('home',s.dataset.scroll);return}
+  const a=e.target.closest('[data-apply]'); if(a){e.preventDefault();startApply(a.dataset.apply||null)}
+});
+function startApply(name){wantLoan=name; if(user){openApp()}else{showAuth('in');go('auth')}}
+function logout(){user=null;$('#navAuth').textContent='Sign in';go('home')}
+
+/* ---------- dashboard grid ---------- */
+const cats=['All',...new Set(loans.map(l=>l.cat))]; let cat='All';
+$('#chips').innerHTML=cats.map(c=>`<button class="chip" aria-pressed="${c==='All'}" data-cat="${c}">${c}</button>`).join('');
+$('#chips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;cat=b.dataset.cat;$$('.chip').forEach(c=>c.setAttribute('aria-pressed',c===b));render()});
+$('#q').addEventListener('input',render);$('#cosOnly').addEventListener('change',render);
+function render(){
+  const q=$('#q').value.trim().toLowerCase(), co=$('#cosOnly').checked;
+  const list=loans.filter(l=>(cat==='All'||l.cat===cat)&&(!co||l.cos)&&(!q||l.name.toLowerCase().includes(q)||l.cat.toLowerCase().includes(q)));
+  $('#grid').innerHTML=list.length?list.map(l=>`<article class="loan">
+    <div class="cat">${l.cat}</div><h3>${l.name}</h3>
+    <div class="apr"><b>${fmtApr(l.lo)}</b> – ${fmtApr(l.hi)} APR</div>
+    <dl><dt>Term</dt><dd>${l.term}</dd><dt>Amount</dt><dd>${l.amt}</dd></dl>
+    ${l.cos?'<span class="badge cos">Cosigner required · 650+ score</span>':'<span class="badge solo">No cosigner needed</span>'}
+    <button class="btn btn-primary btn-sm" data-apply="${l.name}">Apply now</button></article>`).join(''):'<div class="empty">No loans match. Try another search or category.</div>';
+}
+render();
+
+/* ---------- estimator ---------- */
+$('#estLoan').innerHTML=loans.map((l,i)=>`<option value="${i}">${l.name} (from ${fmtApr(l.lo)})</option>`).join('');
+function est(){const l=loans[$('#estLoan').value],P=+$('#estAmt').value,n=+$('#estTerm').value,r=l.lo/1200;
+  $('#estAmtO').textContent=money(P);$('#estTermO').textContent=n+' months';$('#estApr').textContent=fmtApr(l.lo);
+  $('#estPay').textContent=money(r?P*r/(1-Math.pow(1+r,-n)):P/n)+'/mo';}
+['estLoan','estAmt','estTerm'].forEach(id=>$('#'+id).addEventListener('input',est));est();
+$('#estApply').onclick=()=>startApply(loans[$('#estLoan').value].name);
+
+/* ---------- auth ---------- */
+function showAuth(which){$('#tabIn').setAttribute('aria-selected',which==='in');$('#tabUp').setAttribute('aria-selected',which==='up');
+  $('#formIn').hidden=which!=='in';$('#formUp').hidden=which!=='up';$('#formCode').hidden=which!=='code';$('.tabs').hidden=which==='code';}
+$('#tabIn').onclick=()=>showAuth('in');$('#tabUp').onclick=()=>showAuth('up');
+const emailOk=v=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+function err(id,m){const e=$(id);e.textContent=m;e.hidden=!m}
+$('#formIn').onsubmit=e=>{e.preventDefault();const em=$('#inEmail').value.trim();
+  if(!emailOk(em))return err('#inErr','Enter a valid email address.');if(!$('#inPass').value)return err('#inErr','Enter your password.');
+  err('#inErr','');pending={email:em,first:em.split('@')[0]};sendCode()};
+$('#formUp').onsubmit=e=>{e.preventDefault();const em=$('#upEmail').value.trim(),pw=$('#upPass').value;
+  if(!$('#upFirst').value.trim()||!$('#upLast').value.trim())return err('#upErr','Enter your first and last name.');
+  if(!emailOk(em))return err('#upErr','Enter a valid email address.');
+  if(pw.length<8||!/\d/.test(pw))return err('#upErr','Password needs 8+ characters including a number.');
+  if(!$('#upTerms').checked)return err('#upErr','Please accept the terms to continue.');
+  err('#upErr','');pending={email:em,first:$('#upFirst').value.trim(),last:$('#upLast').value.trim(),phone:$('#upPhone').value};sendCode()};
+function sendCode(){code=String(Math.floor(100000+Math.random()*900000));$('#codeTo').textContent=pending.email;$('#codeShow').textContent=code;
+  $('#codeBoxes').innerHTML=Array.from({length:6},(_,i)=>`<input id="cb${i}" inputmode="numeric" maxlength="1" aria-label="Digit ${i+1}">`).join('');
+  err('#codeErr','');showAuth('code');$('#cb0').focus();}
+$('#codeBoxes').addEventListener('input',e=>{const t=e.target;t.value=t.value.replace(/\D/g,'').slice(-1);if(t.value&&t.nextElementSibling)t.nextElementSibling.focus()});
+$('#codeBoxes').addEventListener('keydown',e=>{if(e.key==='Backspace'&&!e.target.value&&e.target.previousElementSibling)e.target.previousElementSibling.focus()});
+$('#codeBoxes').addEventListener('paste',e=>{const d=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6);if(!d)return;e.preventDefault();$$('#codeBoxes input').forEach((b,i)=>b.value=d[i]||'')});
+$('#resend').onclick=sendCode;
+$('#formCode').onsubmit=e=>{e.preventDefault();const v=$$('#codeBoxes input').map(b=>b.value).join('');
+  if(v!==code)return err('#codeErr','That code doesn\'t match. Check the email and try again, or resend.');
+  user=pending;$('#navAuth').textContent='Sign out';openApp()};
+
+/* ---------- application ---------- */
+$('#aType').innerHTML=loans.map(l=>`<option>${l.name}</option>`).join('');
+const DECL=["Have you declared bankruptcy in the last 7 years?","Have you had a property foreclosed or given a deed in lieu in the last 7 years?","Are there any outstanding judgments or liens against you?","Are you a party to a lawsuit that could affect your finances?","Are you delinquent or in default on any federal debt (taxes, student loans)?","Are you a co-signer or guarantor on any other loan?","Have you had wages garnished or a vehicle repossessed in the last 3 years?","Are you currently in a debt-management or settlement program?"];
+$('#declarations').innerHTML=DECL.map((q,i)=>`<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px"><span style="min-width:0;flex:1 1 300px">${q}</span><span class="radio-row"><label><input type="radio" name="d${i}" value="no" checked> No</label><label><input type="radio" name="d${i}" value="yes"> Yes</label></span></div>`).join('');
+
+const F=(id,label,type='text',extra='')=>{if(type==='select'){return `<div class="field"><label for="${id}">${label}</label><select id="${id}">${extra.split('|').map(o=>`<option>${o}</option>`).join('')}</select></div>`}
+  return `<div class="field${extra==='full'?' full':''}"><label for="${id}">${label}</label><input id="${id}" type="${type}"${type==='number'?' min="0"':''}></div>`};
+const SPEC={
+ Auto:["Vehicle details","Tell us about the vehicle you're buying, refinancing or buying out.",F('vYear','Year *','number')+F('vMake','Make *')+F('vModel','Model *')+F('vTrim','Trim')+F('vVin','VIN')+F('vMiles','Mileage *','number')+F('vPrice','Purchase price / payoff ($) *','number')+F('vDown','Down payment ($)','number')+F('vTrade','Trade-in value ($)','number')+F('vSeller','Seller','select','Dealer|Private party|Lease company|Refinancing my current loan')+F('vDealer','Dealer name & location')+F('vUse','Primary use','select','Personal|Business|Rideshare')+F('vLien','Current lienholder (refi/buyout)')+F('vIns','Insurance provider *')],
+ Home:["Property details","About the property being bought, built, refinanced or borrowed against.",F('hpAddr','Property address *','text','full')+F('hpType','Property type *','select','Single-family|Condo|Townhouse|2–4 unit|Manufactured|Land')+F('hpOcc','Occupancy *','select','Primary residence|Second home|Investment')+F('hpVal','Estimated value ($) *','number')+F('hpPrice','Purchase price ($)','number')+F('hpDown','Down payment ($)','number')+F('hpDownSrc','Down payment source','select','Savings|Gift|Sale of home|Retirement funds|Grant')+F('hpBal','Current mortgage balance ($)','number')+F('hpTax','Annual property taxes ($)','number')+F('hpIns','Annual homeowners insurance ($)','number')+F('hpHoa','HOA dues ($/mo)','number')+F('hpFirst','First-time homebuyer?','select','No|Yes')+F('hpVa','VA certificate of eligibility?','select','Not applicable|Yes|Requesting')+F('hpRate','Rate type','select','Fixed|Adjustable (ARM)')+F('hpBuilder','Builder / contractor (construction, improvement, solar)')+F('hpAgent','Real estate agent')],
+ Business:["Business details","Owners of 20% or more will be asked for a personal guarantee.",F('bName','Legal business name *')+F('bDba','DBA')+F('bEin','EIN','text')+F('bEnt','Entity type *','select','Sole proprietorship|LLC|S-corp|C-corp|Partnership|Nonprofit')+F('bInd','Industry *')+F('bStart','Date founded *','date')+F('bEmp','Employees','number')+F('bRev','Annual revenue ($) *','number')+F('bProfit','Net profit ($)','number')+F('bOwn','Your ownership % *','number')+F('bAddr','Business address *','text','full')+F('bBank','Business bank')+F('bDebt','Existing business debt ($)','number')+F('bUse','Use of funds','select','Inventory|Payroll|Equipment|Expansion|Refinance debt|Real estate|Launch costs')+F('bEquip','Equipment description & vendor (if financing equipment)','text','full')],
+ Student:["Education details","School certification confirms your enrollment and cost of attendance.",F('sSchool','School name *','text','full')+F('sStudent','Student name (if parent loan)')+F('sLevel','Degree level *','select','Undergraduate|Graduate|Professional (MD, JD, MBA)|Certificate')+F('sMajor','Field of study *')+F('sEnroll','Enrollment status *','select','Full-time|Half-time|Less than half-time')+F('sYear','Year in school','select','1st|2nd|3rd|4th|5th+|Graduate')+F('sGrad','Expected graduation','month')+F('sCoa','Cost of attendance ($/yr)','number')+F('sAid','Financial aid received ($/yr)','number')+F('sPeriod','Loan period','select','Fall & spring|Fall only|Spring only|Summer')+F('sRepay','Repayment while in school','select','Defer payments|Interest only|$25 fixed|Full payments')+F('sRefi','Loans being refinanced (servicer & balance)','text','full')],
+ Agriculture:["Farm & ranch details","Production history helps us size operating lines and equipment terms.",F('gName','Farm / ranch name *')+F('gYears','Years farming *','number')+F('gAcres','Acres owned','number')+F('gLeased','Acres leased','number')+F('gType','Primary operation *','select','Row crops|Livestock|Dairy|Poultry|Orchard / vineyard|Mixed')+F('gHead','Head of livestock','number')+F('gRev','Gross farm income ($) *','number')+F('gIns','Crop insurance provider')+F('gFsa','FSA farm number')+F('gEquip','Equipment / land / livestock being financed','text','full')+F('gLoc','County & state *')],
+ Secured:["Collateral details","The account or asset that will secure this loan.",F('xType','Collateral type *','select','Savings account|Certificate of deposit|Brokerage account|Vehicle|Other')+F('xInst','Institution')+F('xVal','Current value ($) *','number')+F('xMat','CD maturity date','date')+F('xDesc','Description','text','full')],
+ Refinance:["Current loan details","The loan you want to pay off with this one.",F('fLender','Current lender *')+F('fBalance','Current balance ($) *','number')+F('fRate','Current interest rate (%) *','number')+F('fPay','Current monthly payment ($) *','number')+F('fLeft','Months remaining','number')+F('fGoal','Refinance goal','select','Lower rate|Lower payment|Shorter term|Cash out|Remove cosigner')],
+ Medical:["Provider details","We can pay your provider directly.",F('mProv','Provider / clinic name *')+F('mProc','Procedure or treatment')+F('mCost','Estimated cost ($) *','number')+F('mIns','Expected insurance coverage ($)','number')+F('mDate','Procedure date','date')+F('mDirect','Pay provider directly?','select','Yes|No')],
+ Default:["Purchase details","A little more about what this loan covers.",F('oVendor','Vendor, venue or provider')+F('oCost','Total cost ($)','number')+F('oDate','Date of expense','date')+F('oDesc','Details','text','full')]
+};
+const specFor=l=>{if(l.cat==='Refinance'){if(/Auto/.test(l.name))return'Auto';if(/Mortgage/.test(l.name))return'Home';if(/Business/.test(l.name))return'Business';if(/Student/.test(l.name))return'Student';return'Refinance'}
+  if(l.cat==='Credit line')return /Business/.test(l.name)?'Business':/HELOC/.test(l.name)?'Home':'Default';
+  return SPEC[l.cat]?l.cat:'Default'};
+function updateApp(){
+  const l=loans.find(x=>x.name===$('#aType').value), key=specFor(l), [title,desc,html]=SPEC[key];
+  $('#specLegend').textContent='8. '+title;$('#lnkSpecific').textContent='8. '+title;$('#specDesc').textContent=desc;$('#specFields').innerHTML=html;
+  if(key==='Refinance')$('#specFields').innerHTML+=SPEC.Refinance[2].slice(0,0);
+  if(l.cat==='Refinance'&&key!=='Refinance')$('#specFields').innerHTML+=SPEC.Refinance[2];
+  $('#appSummary').innerHTML=`<span>Applying for</span><b>${l.name}</b><span style="font-family:var(--mono)">${fmtApr(l.lo)}–${fmtApr(l.hi)} APR</span>${l.cos?'<span class="badge cos">Cosigner required · 650+</span>':'<span class="badge solo">Cosigner optional</span>'}`;
+  if(l.cos){$('#cosDesc').textContent='This loan requires a cosigner with a credit score of 650 or higher. Your cosigner will get an email to review and e-sign.';$('#cosAddRow').hidden=true;$('#cosFields').hidden=false}
+  else{$('#cosDesc').textContent='Optional. Adding a cosigner with strong credit can lower your rate. Cosigners need a 650+ credit score.';$('#cosAddRow').hidden=false;$('#cosFields').hidden=document.querySelector('input[name=cosAdd]:checked').value!=='yes'}
+}
+$('#aType').addEventListener('change',updateApp);
+$('#cosAddRow').addEventListener('change',updateApp);
+$('#kScore').addEventListener('change',()=>$('#cosErr').hidden=$('#kScore').value!=='Below 650');
+function dti(){const inc=(+$('#eIncome').value+ +$('#eOther').value)/12;const d=['hPay','fCards','fAuto','fStudent','fOtherDebt','fSupport'].reduce((s,id)=>s+ +$('#'+id).value,0);
+  $('#fDti').value=inc?Math.round(d/inc*100)+'%':''}
+['eIncome','eOther','hPay','fCards','fAuto','fStudent','fOtherDebt','fSupport'].forEach(id=>$('#'+id).addEventListener('input',dti));
+function openApp(){if(wantLoan)$('#aType').value=wantLoan;
+  if(user){$('#pEmail').value=user.email;if(user.first&&!$('#pFirst').value)$('#pFirst').value=user.first;if(user.last)$('#pLast').value=user.last;if(user.phone)$('#pPhone').value=user.phone}
+  $('#sigDate').value=new Date().toLocaleDateString('en-US');updateApp();go('apply')}
+$('#fillSample').onclick=()=>{const s={aAmt:18500,aDesc:'Pay off two credit cards',pFirst:'Jordan',pLast:'Rivera',pDob:'1990-04-12',pEmail:user?.email||'jordan@example.com',pPhone:'(555) 010-2244',hStreet:'1200 Harbor View Dr',hCity:'Lakeport',hState:'MI',hZip:'48059',hYears:4,hPay:1450,iIdState:'MI',iIdExp:'2029-04-12',eEmployer:'Northshore Health',eTitle:'Lab technician',eStart:'2019-06-03',eIncome:68000,fBank:'Lakeside Credit Union',fCash:6200,fCards:310,fAuto:285,r1n:'Sam Ortiz',r1r:'Coworker',r1p:'(555) 010-7788',r2n:'Lee Park',r2r:'Friend',r2p:'(555) 010-9900',sig:'Jordan Rivera'};
+  Object.entries(s).forEach(([k,v])=>{const el=$('#'+k);if(el)el.value=v});['c1','c2','c3','c4'].forEach(id=>$('#'+id).checked=true);dti()};
+$('#appForm').onsubmit=e=>{e.preventDefault();
+  const req=['aAmt','pFirst','pLast','pDob','pEmail','pPhone','hStreet','hCity','eIncome','sig'];
+  const miss=req.filter(id=>!$('#'+id).value.trim());
+  if(miss.length){err('#appErr','Please complete the required fields, starting with: '+$('label[for='+miss[0]+']').textContent.replace(' *',''));$('#'+miss[0]).focus();return}
+  if(!['c1','c2','c3','c4'].every(id=>$('#'+id).checked))return err('#appErr','Please check all required consent boxes.');
+  const l=loans.find(x=>x.name===$('#aType').value);
+  if(!$('#cosFields').hidden){if(!$('#kName').value.trim())return err('#appErr','Add your cosigner\'s name to continue.');if($('#kScore').value==='Below 650')return err('#appErr','Your cosigner needs a credit score of 650 or higher.')}
+  err('#appErr','');$('#doneMsg').textContent=`Thanks, ${$('#pFirst').value}. Your ${l.name.toLowerCase()} request for ${money($('#aAmt').value)} would now go to underwriting, with a decision emailed to ${$('#pEmail').value} within 1 business day.`;go('done')};
+
+/* ---------- chat ---------- */
+const chat=$('#chat'),body=$('#chatBody');let chatStarted=false;
+function addMsg(t,who){const d=document.createElement('div');d.className='msg '+who;d.textContent=t;body.appendChild(d);body.scrollTop=body.scrollHeight;return d}
+function agentSay(t,delay=900){const ty=addMsg('Dana is typing…','agent typing');setTimeout(()=>{ty.remove();addMsg(t,'agent')},delay)}
+const QUICK=['What rates can I get?','Do I need a cosigner?','How fast is funding?','Talk to a person'];
+$('#quick').innerHTML=QUICK.map(q=>`<button type="button">${q}</button>`).join('');
+$('#quick').addEventListener('click',e=>{if(e.target.tagName==='BUTTON')send(e.target.textContent)});
+function reply(t){t=t.toLowerCase();
+  if(/rate|apr|interest/.test(t))return'Starting APRs run from 3.00% on CD-secured loans up to 35.99% on short-term loans. Tell me the loan type and I\'ll give you the range.';
+  if(/cosign|co-sign/.test(t))return'Unsecured personal, student, used car, startup, debt consolidation, wedding, P2P and personal line of credit loans need a cosigner with a 650+ credit score.';
+  if(/fast|fund|when|how long/.test(t))return'Most personal loans get a decision within 24 hours and fund 1–2 business days after you sign. Mortgages take 30–45 days.';
+  if(/person|human|agent|call/.test(t))return'You\'re chatting with a person-style demo agent. On a live site this would hand you to a specialist through a chat service like Intercom, Zendesk or Tawk.to.';
+  if(/hi|hello|hey/.test(t))return'Hi there! What kind of loan are you looking at?';
+  const l=loans.find(x=>t.includes(x.name.toLowerCase().replace(' loan','')));
+  if(l)return`${l.name}: ${fmtApr(l.lo)}–${fmtApr(l.hi)} APR, ${l.term}, ${l.amt}. ${l.cos?'This one needs a cosigner with a 650+ score.':'No cosigner needed.'} Want to start an application?`;
+  return'Good question. I can help with rates, requirements, cosigners and your application status. Which loan are you interested in?'}
+function send(t){if(!t.trim())return;addMsg(t,'me');agentSay(reply(t))}
+$('#chatForm').onsubmit=e=>{e.preventDefault();send($('#chatIn').value);$('#chatIn').value=''};
+function toggleChat(open){chat.hidden=!open;$('#chatFab').setAttribute('aria-expanded',open);
+  if(open&&!chatStarted){chatStarted=true;addMsg('Connecting you to a specialist… (demo)','sys');agentSay('Hi, I\'m Dana with Harborline. How can I help you today?',1400)}
+  if(open)setTimeout(()=>$('#chatIn').focus(),50)}
+$('#chatFab').onclick=()=>toggleChat(chat.hidden);$('#chatClose').onclick=()=>toggleChat(false);
+</script>
